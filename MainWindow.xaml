@@ -1,12 +1,80 @@
-﻿<Window x:Class="Finding.MainWindow"
+﻿<Controls:MetroWindow x:Class="Finding.MainWindow"
         xmlns="http://schemas.microsoft.com/winfx/2006/xaml/presentation"
         xmlns:x="http://schemas.microsoft.com/winfx/2006/xaml"
         xmlns:d="http://schemas.microsoft.com/expression/blend/2008"
         xmlns:mc="http://schemas.openxmlformats.org/markup-compatibility/2006"
+        xmlns:Controls="clr-namespace:MahApps.Metro.Controls;assembly=MahApps.Metro"
         xmlns:local="clr-namespace:Finding"
-        mc:Ignorable="d"
-        Title="MainWindow" Height="450" Width="800">
-    <Grid>
-        
+                      xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
+                      mc:Ignorable="d"
+        xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
+        Title="Finding" Height="491.6" Width="776.8"
+        TextElement.Foreground="{DynamicResource MaterialDesignBody}"
+        Background="{DynamicResource MaterialDesignPaper}"
+        ShowTitleBar="True"
+        TextElement.FontWeight="Medium"
+        TextElement.FontSize="14"
+        FontFamily="pack://application:,,,/MaterialDesignThemes.Wpf;component/Resources/Roboto/#Roboto" WindowStyle="None">
+   
+    <Grid >
+        <StackPanel Margin="0,0,-0.4,0.2">
+            <Menu Grid.Row="0" HorizontalAlignment="Left" Width="774" Margin="0,0,0,0.2" BorderThickness="0,0,0,4" BorderBrush="White" UseLayoutRounding="False" Padding="0" Height="34.2">
+                <MenuItem Height="34" Header="_Files" FontSize="15">
+                    <MenuItem Name="OpenDirectoryMenuItem"  Header="Open directory" HorizontalAlignment="Left" Padding="12,0" Click="OpenDirectoryMenuItem_Click"/>
+                </MenuItem>
+
+            </Menu>
+            <Grid Height="425" Margin="0,0,0.4,0">
+                <Grid.Resources>
+                    <Style x:Key="itemstyle" TargetType="{x:Type ListViewItem}">
+                        <EventSetter Event="MouseDoubleClick" Handler="FileItem_DoubleClick" />
+                    </Style>
+                </Grid.Resources>
+                
+                <TextBox Margin="10,5,117,379" Padding="4,12,0,0">
+                    <TextBox.Resources>
+                        <VisualBrush x:Key="HintText" TileMode="None" Opacity="0.5" Stretch="None" AlignmentX="Left">
+                            <VisualBrush.Transform>
+                                <TransformGroup>
+                                    <ScaleTransform/>
+                                    <SkewTransform/>
+                                    <RotateTransform/>
+                                    <TranslateTransform X="5"/>
+                                </TransformGroup>
+                            </VisualBrush.Transform>
+                            <VisualBrush.Visual>
+                                <TextBlock FontStyle="Italic" Text="Please input the file name" Margin="0"/>
+                            </VisualBrush.Visual>
+                        </VisualBrush>
+                    </TextBox.Resources>
+                    <TextBox.Style>
+                        <Style TargetType="TextBox">
+                            <Style.Triggers>
+                                <Trigger Property="Text" Value="{x:Null}">
+                                    <Setter Property="Background" Value="{StaticResource HintText}"/>
+                                </Trigger>
+                                <Trigger Property="Text" Value="">
+                                    <Setter Property="Background" Value="{StaticResource HintText}"/>
+                                </Trigger>
+                            </Style.Triggers>
+                        </Style>
+                    </TextBox.Style>
+                </TextBox>
+                <Button x:Name="FindButton" Content="Find" HorizontalAlignment="Left" Margin="670,7,0,0" VerticalAlignment="Top" Width="94" Height="36" Click="FindButton_Click"/>
+
+
+                <ListView ItemContainerStyle="{StaticResource itemstyle}" x:Name="FilesListView" HorizontalAlignment="Left" Height="364" Margin="10,51,0,0" VerticalAlignment="Top" Width="754" BorderThickness="1" BorderBrush="#89480505">
+                    <ListView.View>
+                        <GridView>
+                            <GridViewColumn Header="Name" DisplayMemberBinding="{Binding Name}" Width="200" />
+                            <GridViewColumn Header="Type" DisplayMemberBinding="{Binding Type}" />
+                            <GridViewColumn Header="Path" DisplayMemberBinding="{Binding Path}" />
+                        </GridView>
+                    </ListView.View>
+                </ListView>
+                <Rectangle Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="364" Margin="10,51,0,0" Stroke="Black" VerticalAlignment="Top" Width="754" Panel.ZIndex="-1"/>
+            </Grid>
+        </StackPanel>
     </Grid>
-</Window>
+
+</Controls:MetroWindow>
