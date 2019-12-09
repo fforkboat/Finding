@@ -23,10 +23,14 @@ namespace Finding
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
+        // ListViewItem 绑定的数据，代表当前文件夹下的一个文件的信息
         private class FileItemInfo
         {
+            // 文件名
             public string Name { set; get; }
+            // 文件类型
             public string Type { set; get; }
+            // 文件路径
             public string Path { set; get; }
 
             public FileItemInfo(string name, string type, string path)
@@ -42,6 +46,7 @@ namespace Finding
             InitializeComponent();
         }
 
+        // 点击 OpenDirectoryMenuItem 的事件处理函数，用于打开一个文件夹
         private void OpenDirectoryMenuItem_Click(object sender, RoutedEventArgs e)
         {
             Ookii.Dialogs.Wpf.VistaFolderBrowserDialog folderBrowserDialog = new Ookii.Dialogs.Wpf.VistaFolderBrowserDialog();
@@ -68,12 +73,14 @@ namespace Finding
             }
         }
 
+        // 双击 ListViewItem 的事件处理函数，用于打开某个文件
         private void FileItem_DoubleClick(object sender, MouseButtonEventArgs e)
         {
             var fileItemInfo = ((ListViewItem)sender).Content as FileItemInfo;
             System.Diagnostics.Process.Start(fileItemInfo.Path);
         }
 
+        // 单击 FindButton 的事件处理函数， 用于进行文件搜索
         private void FindButton_Click(object sender, RoutedEventArgs e)
         {
 
