@@ -31,7 +31,7 @@
                     </Style>
                 </Grid.Resources>
                 
-                <TextBox Margin="10,5,117,379" Padding="4,12,0,0">
+                <TextBox x:Name="Txb_Search_Key" Margin="10,5,117,379" Padding="4,12,0,0">
                     <TextBox.Resources>
                         <VisualBrush x:Key="HintText" TileMode="None" Opacity="0.5" Stretch="None" AlignmentX="Left">
                             <VisualBrush.Transform>
@@ -74,7 +74,10 @@
                 </ListView>
                 <Rectangle Fill="#FFF4F4F5" HorizontalAlignment="Left" Height="364" Margin="10,51,0,0" Stroke="Black" VerticalAlignment="Top" Width="754" Panel.ZIndex="-1"/>
             </Grid>
+           
         </StackPanel>
+        <Label Content="Used Time: "  Margin="10,455,0,0"/>
+        <Label x:Name="Lbl_Used_Time" Content="0s"  Margin="90,455,0,0"/>
     </Grid>
 
 </Controls:MetroWindow>
