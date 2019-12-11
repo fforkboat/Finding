@@ -68,8 +68,6 @@ namespace Finding
                     DirectoryInfo directoryInfo = new DirectoryInfo(dir);
                     FilesListView.Items.Add(new FileItemInfo(directoryInfo.Name, "directory", dir));
                 }
-
-               
             }
         }
 
