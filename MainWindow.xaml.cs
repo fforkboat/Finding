@@ -24,9 +24,14 @@ namespace Finding
     public partial class MainWindow : MetroWindow
     {
         // 记录耗时
-        System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+        private System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
         // redis配置
         private const string redisConnStr = "127.0.0.1:6379,password=,DefaultDatabase=0";
+        // 当前目录
+        private string curDirPath;
+
+        // 缓存列表
+        private List<string> matchedFilenameList = new List<string>();
 
         // ListViewItem 绑定的数据，代表当前文件夹下的一个文件的信息
         private class FileItemInfo
@@ -49,6 +54,24 @@ namespace Finding
         public MainWindow()
         {
             InitializeComponent();
+            ConnectRedis();
+        }
+
+        /// <summary>
+        /// 连接redis
+        /// </summary>
+        private void ConnectRedis()
+        {
+            try
+            {
+                RedisHelper.SetCon(redisConnStr);
+                MessageBox.Show("连接redis成功");
+            }
+            catch (Exception ex)
+            {
+                MessageBox.Show(ex.Message);
+                throw;
+            }
         }
 
         // 点击 OpenDirectoryMenuItem 的事件处理函数，用于打开一个文件夹
@@ -58,9 +81,9 @@ namespace Finding
 
             if (folderBrowserDialog.ShowDialog() == true)
             {
-                String path = folderBrowserDialog.SelectedPath;
-                string[] files = Directory.GetFiles(path, "*.*");
-                string[] subdirs = Directory.GetDirectories(path);
+                curDirPath = folderBrowserDialog.SelectedPath;
+                string[] files = Directory.GetFiles(curDirPath, "*.*");
+                string[] subdirs = Directory.GetDirectories(curDirPath);
 
                 foreach (var file in files)
                 {
@@ -108,17 +131,123 @@ namespace Finding
         /// <param name="key">搜索关键字</param>
         private void SearchInSelectedDir(string key)
         {
-            throw new NotImplementedException();
+            string combinedKey = GetCombinedKey(key);
+            matchedFilenameList.Clear();
+            if (RedisHelper.Exists(combinedKey))
+            {
+                matchedFilenameList = RedisHelper.Get<List<string>>(combinedKey);
+                DispMatchedFiles();
+                return;
+            }
+            
+            SearchPDF(key);
+            SearchDoc(key);
+            SearchImage(key);
+            // 写回缓存
+            if (matchedFilenameList.Count >0)
+            {
+                RedisHelper.Set(combinedKey, matchedFilenameList);
+                DispMatchedFiles();
+            } else
+            {
+                // 未搜索到匹配文件
+                DispNotMatched();
+            }
         }
+
+
+
+        // todo 未递归子目录搜索, 未递归压缩文件
+        // todo 后期只遍历一次, 不分多次遍历; 前期分开调试用
+        private void SearchImage(string key)
+        {
+            var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories)
+                .Where(s => s.EndsWith(".bmp") || s.EndsWith(".jpg") || s.EndsWith(".png") || s.EndsWith(".jpeg"));
+            foreach (var filename in files)
+            {
+                Console.WriteLine(filename);
+
+            }
+
+        }
+
+        private void SearchDoc(string key)
+        {
+            var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories)
+                .Where(s => s.EndsWith(".doc") || s.EndsWith(".docx"));
+            foreach (var filename in files)
+            {
+                Console.WriteLine(filename);
+            }
+        }
+
+        private void SearchPDF(string key)
+        {
+            string[] files = Directory.GetFiles(curDirPath, "*.pdf");
+            
+            foreach (var filename in files)
+            {
+                Console.WriteLine(filename);
+                if(PDFContainsKey(filename, key))
+                {
+                    // 加入待显示列表
+                    matchedFilenameList.Add(filename);
+                }
+            }
+        }
+
+        /// <summary>
+        /// 调用外部函数
+        /// </summary>
+        /// <param name="filename">待匹配文件</param>
+        /// <param name="key">待搜索键</param>
+        /// <returns></returns>
+        private bool PDFContainsKey(string filename, string key)
+        {
+            return false;
+        }
+
+        /// <summary>
+        /// 获取当前目录与key的组合键
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        private string GetCombinedKey(string key)
+        {
+            return curDirPath + ":" + key;
+        }
+
+        /// <summary>
+        /// 显示匹配文件
+        /// </summary>
+        private void DispMatchedFiles()
+        {
+            foreach (var filename in matchedFilenameList)
+            {
+                FileInfo fileInfo = new FileInfo(filename);
+                FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filename));
+            }
+        }
+
+
 
         /// <summary>
         /// 显示搜索耗时
         /// </summary>
         private void DispElapsedTime()
         {
-            // 
+            // 以秒为单位, 可修改
             Lbl_Used_Time.Content = string.Format("{0}s", stopwatch.Elapsed.TotalSeconds);
             
         }
+
+        /// <summary>
+        /// 未搜索到提示
+        /// </summary>
+        private void DispNotMatched()
+        {
+            throw new NotImplementedException();
+        }
+
     }
 }
