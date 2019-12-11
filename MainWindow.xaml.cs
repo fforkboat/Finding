@@ -119,7 +119,7 @@ namespace Finding
             }
             stopwatch.Start();
 
-            SearchInSelectedDir(Txb_Search_Key.Text);
+            SearchInSelectedDir(curDirPath, Txb_Search_Key.Text);
 
             stopwatch.Stop();
             DispElapsedTime();
@@ -128,8 +128,9 @@ namespace Finding
         /// <summary>
         /// 根据key搜索当前目录下匹配的文件
         /// </summary>
+        /// <param name="dir">当前文件夹</param>
         /// <param name="key">搜索关键字</param>
-        private void SearchInSelectedDir(string key)
+        private void SearchInSelectedDir(string dir, string key)
         {
             string combinedKey = GetCombinedKey(key);
             matchedFilenameList.Clear();
@@ -139,7 +140,15 @@ namespace Finding
                 DispMatchedFiles();
                 return;
             }
-            
+
+            string[] subdirs = Directory.GetDirectories(dir);
+            foreach (var subdir in subdirs)
+            {
+                // 递归搜索文件夹
+                SearchInSelectedDir(subdir, key);
+            }
+
+            ZipFiles();
             SearchPDF(key);
             SearchDoc(key);
             SearchImage(key);
@@ -155,6 +164,16 @@ namespace Finding
             }
         }
 
+        private void ZipFiles()
+        {
+            var files = Directory.GetFiles(curDirPath, "*.zip", SearchOption.AllDirectories);
+            var zipper = new Ziper();
+            foreach (var file in files)
+            {
+                var target = file.Substring(0, file.LastIndexOf('\\'));
+                zipper.extract(file, target);
+            }
+        }
 
 
         // todo 未递归子目录搜索, 未递归压缩文件
