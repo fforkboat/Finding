@@ -198,7 +198,7 @@ namespace Finding
         private bool DocumentContainsKey(string filename, string key)
         {
             Process process = new Process();
-            string cmd = @"java -jar C:\Users\zhang\Desktop\Finding-master\packages\FindDoc\Csapp_ReadFile_jar\Csapp_ReadFile.jar";  //cmd命令
+            string cmd = @"java -jar C:\Users\andys\source\repos\searchdocs\Csapp_ReadFile.jar";  //cmd命令
             process.StartInfo.FileName = @"cmd.exe";
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.RedirectStandardInput = true;
