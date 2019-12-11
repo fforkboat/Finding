@@ -1,20 +1,13 @@
 ﻿using MahApps.Metro.Controls;
 using System;
 using System.Collections.Generic;
+using System.Diagnostics;
 using System.IO;
 using System.Linq;
-using System.Text;
-using System.Threading.Tasks;
+using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
-using System.Windows.Controls.Primitives;
-using System.Windows.Data;
-using System.Windows.Documents;
 using System.Windows.Input;
-using System.Windows.Media;
-using System.Windows.Media.Imaging;
-using System.Windows.Navigation;
-using System.Windows.Shapes;
 
 namespace Finding
 {
@@ -30,7 +23,7 @@ namespace Finding
         // 当前目录
         private string curDirPath;
 
-        // 缓存列表
+        // 已匹配列表
         private List<string> matchedFilenameList = new List<string>();
 
         // ListViewItem 绑定的数据，代表当前文件夹下的一个文件的信息
@@ -97,7 +90,7 @@ namespace Finding
                     FilesListView.Items.Add(new FileItemInfo(directoryInfo.Name, "directory", dir));
                 }
 
-               
+
             }
         }
 
@@ -117,6 +110,8 @@ namespace Finding
 
                 return;
             }
+
+            FilesListView.Items.Clear();
             stopwatch.Start();
 
             SearchInSelectedDir(curDirPath, Txb_Search_Key.Text);
@@ -133,13 +128,14 @@ namespace Finding
         private void SearchInSelectedDir(string dir, string key)
         {
             string combinedKey = GetCombinedKey(key);
-            matchedFilenameList.Clear();
-            if (RedisHelper.Exists(combinedKey))
-            {
-                matchedFilenameList = RedisHelper.Get<List<string>>(combinedKey);
-                DispMatchedFiles();
-                return;
-            }
+ 
+            //             matchedFilenameList.Clear();
+            //             if (RedisHelper.Exists(combinedKey))
+            //             {
+            //                 matchedFilenameList = RedisHelper.Get<List<string>>(combinedKey);
+            //                 DispMatchedFiles();
+            //                 return;
+            //             }
 
             string[] subdirs = Directory.GetDirectories(dir);
             foreach (var subdir in subdirs)
@@ -149,18 +145,19 @@ namespace Finding
             }
 
             ZipFiles();
-            SearchPDF(key);
-            SearchDoc(key);
+            SearchDocument(key);
             SearchImage(key);
             // 写回缓存
-            if (matchedFilenameList.Count >0)
+            if (matchedFilenameList.Count > 0)
             {
+
                 RedisHelper.Set(combinedKey, matchedFilenameList);
-                DispMatchedFiles();
-            } else
+                // DispMatchedFiles();
+            }
+            else
             {
                 // 未搜索到匹配文件
-                DispNotMatched();
+                // DispNotMatched();
             }
         }
 
@@ -190,28 +187,14 @@ namespace Finding
 
         }
 
-        private void SearchDoc(string key)
+        private void SearchDocument(string key)
         {
-            var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories)
-                .Where(s => s.EndsWith(".doc") || s.EndsWith(".docx"));
-            foreach (var filename in files)
-            {
-                Console.WriteLine(filename);
-            }
-        }
+            string[] files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories);
 
-        private void SearchPDF(string key)
-        {
-            string[] files = Directory.GetFiles(curDirPath, "*.pdf");
-            
             foreach (var filename in files)
             {
                 Console.WriteLine(filename);
-                if(PDFContainsKey(filename, key))
-                {
-                    // 加入待显示列表
-                    matchedFilenameList.Add(filename);
-                }
+                DocumentContainsKey(filename, key);
             }
         }
 
@@ -221,9 +204,47 @@ namespace Finding
         /// <param name="filename">待匹配文件</param>
         /// <param name="key">待搜索键</param>
         /// <returns></returns>
-        private bool PDFContainsKey(string filename, string key)
+        private bool DocumentContainsKey(string filename, string key)
         {
-            return false;
+            Process process = new Process();
+            string cmd = @"java -jar C:\Users\zhang\Desktop\Finding-master\packages\FindDoc\Csapp_ReadFile_jar\Csapp_ReadFile.jar";  //cmd命令
+            process.StartInfo.FileName = @"cmd.exe";
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.RedirectStandardInput = true;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.RedirectStandardError = true;
+            process.StartInfo.CreateNoWindow = true;
+            process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+            {
+                Console.WriteLine(e.Data);
+                if (!string.IsNullOrEmpty(e.Data) && e.Data.Length <= 2)
+                {
+                    if (e.Data != "0")
+                    {
+                        FileInfo fileInfo = new FileInfo(filename);
+                        matchedFilenameList.Add(filename);
+
+                        FilesListView.Dispatcher.BeginInvoke(new Action(() =>
+                        {
+
+                            FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filename));
+                        }));
+
+                    }
+                }
+
+            });
+
+            process.Start();//启动程序
+            process.StandardInput.AutoFlush = true;
+            process.StandardInput.WriteLine(cmd); //向cmd窗口写入命令
+
+            process.BeginOutputReadLine();
+            process.StandardInput.WriteLine(filename);
+            process.StandardInput.WriteLine(key);
+
+            process.Close();
+            return true;
         }
 
         /// <summary>
@@ -257,7 +278,7 @@ namespace Finding
         {
             // 以秒为单位, 可修改
             Lbl_Used_Time.Content = string.Format("{0}s", stopwatch.Elapsed.TotalSeconds);
-            
+
         }
 
         /// <summary>
@@ -265,7 +286,7 @@ namespace Finding
         /// </summary>
         private void DispNotMatched()
         {
-            throw new NotImplementedException();
+
         }
 
     }
