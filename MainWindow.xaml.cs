@@ -23,6 +23,11 @@ namespace Finding
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
+        // 记录耗时
+        System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+        // redis配置
+        private const string redisConnStr = "127.0.0.1:6379,password=,DefaultDatabase=0";
+
         // ListViewItem 绑定的数据，代表当前文件夹下的一个文件的信息
         private class FileItemInfo
         {
@@ -83,7 +88,37 @@ namespace Finding
         // 单击 FindButton 的事件处理函数， 用于进行文件搜索
         private void FindButton_Click(object sender, RoutedEventArgs e)
         {
+            if (string.IsNullOrWhiteSpace(Txb_Search_Key.Text))
+            {
+                // 提示不能为空
 
+                return;
+            }
+            stopwatch.Start();
+
+            SearchInSelectedDir(Txb_Search_Key.Text);
+
+            stopwatch.Stop();
+            DispElapsedTime();
+        }
+
+        /// <summary>
+        /// 根据key搜索当前目录下匹配的文件
+        /// </summary>
+        /// <param name="key">搜索关键字</param>
+        private void SearchInSelectedDir(string key)
+        {
+            throw new NotImplementedException();
+        }
+
+        /// <summary>
+        /// 显示搜索耗时
+        /// </summary>
+        private void DispElapsedTime()
+        {
+            // 
+            Lbl_Used_Time.Content = string.Format("{0}s", stopwatch.Elapsed.TotalSeconds);
+            
         }
     }
 }
