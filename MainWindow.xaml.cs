@@ -20,6 +20,9 @@ namespace Finding
         private System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
         // redis配置
         private const string redisConnStr = "127.0.0.1:6379,password=,DefaultDatabase=0";
+        // 文档搜索
+        private const string DOC_EXE = @"java -jar Y:\desktop\Csapp_ReadFile_jar\Csapp_ReadFile.jar";
+        private const string CMD_EXE = @"cmd.exe";
         // 当前目录
         private string curDirPath;
 
@@ -126,7 +129,7 @@ namespace Finding
         private void SearchInSelectedDir(string dir, string key)
         {
             string combinedKey = GetCombinedKey(key);
- 
+
             //             matchedFilenameList.Clear();
             //             if (RedisHelper.Exists(combinedKey))
             //             {
@@ -134,10 +137,21 @@ namespace Finding
             //                 DispMatchedFiles();
             //                 return;
             //             }
-
+            var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories);
             ZipFiles();
-            SearchDocument(key);
-            SearchImage(key);
+            foreach (var filename in files)
+            {
+                if (IsImageFile(filename))
+                {
+                    ImageContainsKey(filename, key);
+                }
+                else if (IsDocFile(filename))
+                {
+                    DocumentContainsKey(filename, key);
+                }
+
+            }
+            
             // 写回缓存
             if (matchedFilenameList.Count > 0)
             {
@@ -152,6 +166,23 @@ namespace Finding
             }
         }
 
+
+        private bool IsDocFile(string filename)
+        {
+            return filename.EndsWith(".pdf") || filename.EndsWith(".txt")
+            || filename.EndsWith(".doc") || filename.EndsWith(".docx")
+            || filename.EndsWith(".ppt") || filename.EndsWith(".pptx")
+            || filename.EndsWith(".xls") || filename.EndsWith(".xlsx");
+        }
+
+        private bool IsImageFile(string filename)
+        {
+            return filename.EndsWith(".jpg") || filename.EndsWith(".jpeg")
+                || filename.EndsWith(".bmp") || filename.EndsWith(".png");
+        }
+
+
+
         private void ZipFiles()
         {
             var files = Directory.GetFiles(curDirPath, "*.zip", SearchOption.AllDirectories);
@@ -164,31 +195,6 @@ namespace Finding
         }
 
 
-        // todo 未递归子目录搜索, 未递归压缩文件
-        // todo 后期只遍历一次, 不分多次遍历; 前期分开调试用
-        private void SearchImage(string key)
-        {
-            var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories)
-                .Where(s => s.EndsWith(".bmp") || s.EndsWith(".jpg") || s.EndsWith(".png") || s.EndsWith(".jpeg"));
-            foreach (var filename in files)
-            {
-                Console.WriteLine(filename);
-
-            }
-
-        }
-
-        private void SearchDocument(string key)
-        {
-            string[] files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories);
-
-            foreach (var filename in files)
-            {
-                Console.WriteLine(filename);
-                DocumentContainsKey(filename, key);
-            }
-        }
-
         /// <summary>
         /// 调用外部函数
         /// </summary>
@@ -198,8 +204,8 @@ namespace Finding
         private bool DocumentContainsKey(string filename, string key)
         {
             Process process = new Process();
-            string cmd = @"java -jar C:\Users\zhang\Desktop\Finding-master\packages\FindDoc\Csapp_ReadFile_jar\Csapp_ReadFile.jar";  //cmd命令
-            process.StartInfo.FileName = @"cmd.exe";
+            string cmd = DOC_EXE;
+            process.StartInfo.FileName = CMD_EXE;
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.RedirectStandardInput = true;
             process.StartInfo.RedirectStandardOutput = true;
@@ -234,6 +240,17 @@ namespace Finding
 
             process.Close();
             return true;
+        }
+
+
+        /// <summary>
+        /// 调用外部函数在图片中搜索
+        /// </summary>
+        /// <param name="filename">待匹配文件</param>
+        /// <param name="key">待搜索键</param>
+        private void ImageContainsKey(string filename, string key)
+        {
+
         }
 
         /// <summary>
