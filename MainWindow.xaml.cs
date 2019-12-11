@@ -71,9 +71,9 @@ namespace Finding
         private void OpenDirectoryMenuItem_Click(object sender, RoutedEventArgs e)
         {
             Ookii.Dialogs.Wpf.VistaFolderBrowserDialog folderBrowserDialog = new Ookii.Dialogs.Wpf.VistaFolderBrowserDialog();
-
             if (folderBrowserDialog.ShowDialog() == true)
             {
+                FilesListView.Items.Clear();
                 curDirPath = folderBrowserDialog.SelectedPath;
                 string[] files = Directory.GetFiles(curDirPath, "*.*");
                 string[] subdirs = Directory.GetDirectories(curDirPath);
@@ -134,13 +134,6 @@ namespace Finding
             //                 DispMatchedFiles();
             //                 return;
             //             }
-
-            string[] subdirs = Directory.GetDirectories(dir);
-            foreach (var subdir in subdirs)
-            {
-                // 递归搜索文件夹
-                SearchInSelectedDir(subdir, key);
-            }
 
             ZipFiles();
             SearchDocument(key);
@@ -214,11 +207,11 @@ namespace Finding
             process.StartInfo.CreateNoWindow = true;
             process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
             {
-                Console.WriteLine(e.Data);
                 if (!string.IsNullOrEmpty(e.Data) && e.Data.Length == 1)
                 {
                     if (e.Data != "0")
                     {
+                        Console.WriteLine(e.Data);
                         FileInfo fileInfo = new FileInfo(filename);
                         matchedFilenameList.Add(filename);
 
