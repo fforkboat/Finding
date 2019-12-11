@@ -89,8 +89,6 @@ namespace Finding
                     DirectoryInfo directoryInfo = new DirectoryInfo(dir);
                     FilesListView.Items.Add(new FileItemInfo(directoryInfo.Name, "directory", dir));
                 }
-
-
             }
         }
 
@@ -197,7 +195,7 @@ namespace Finding
             process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
             {
                 Console.WriteLine(e.Data);
-                if (!string.IsNullOrEmpty(e.Data) && e.Data.Length <= 2)
+                if (!string.IsNullOrEmpty(e.Data) && e.Data.Length == 1)
                 {
                     if (e.Data != "0")
                     {
@@ -206,7 +204,6 @@ namespace Finding
 
                         FilesListView.Dispatcher.BeginInvoke(new Action(() =>
                         {
-
                             FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filename));
                         }));
 
@@ -216,10 +213,9 @@ namespace Finding
             });
 
             process.Start();//启动程序
+            process.BeginOutputReadLine();
             process.StandardInput.AutoFlush = true;
             process.StandardInput.WriteLine(cmd); //向cmd窗口写入命令
-
-            process.BeginOutputReadLine();
             process.StandardInput.WriteLine(filename);
             process.StandardInput.WriteLine(key);
 
