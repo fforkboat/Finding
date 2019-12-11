@@ -1,20 +1,14 @@
 ﻿using System;
 using System.Collections.Generic;
 using System.IO;
-using System.Linq;
 using System.Text;
-using System.Threading.Tasks;
 using Ionic.Zip;
 
 namespace Finding
 {
-    /*
-        * function: void extract()
-        * param1: 需要解压缩的文件
-        * param2: 解压后新建的目标文件夹名
-        * (get)docxList: pdf\doc\excel\ppt\txt 文本文件
-        * (get)imageList：jpg\png\gif 图片文件
-        */
+    /// <summary>
+    /// 解压
+    /// </summary>
     public class Ziper
     {
         private List<string> docxList;
@@ -26,16 +20,29 @@ namespace Finding
             imageList = new List<string>();
         }
 
-        public List<string> getDocxList()
+        /// <summary>
+        /// 获得递归解压后文件中的doc、pdf等文件的绝对路径
+        /// </summary>
+        /// <returns>文件路径的List</returns>
+        public List<string> GetDocxList()
         {
             return docxList;
         }
 
-        public List<string> getImageeList()
+        /// <summary>
+        /// 获得递归解压后文件中的image等文件的绝对路径
+        /// </summary>
+        /// <returns>照片路径的List</returns>
+        public List<string> GetImageList()
         {
             return imageList;
         }
 
+        /// <summary>
+        /// 解压缩函数
+        /// </summary>
+        /// <param name="sourceFile">目标路径</param>
+        /// <param name="targetFile">解压后文件存放路径</param>
         public void extract(string sourceFile, string targetFile)
         {
             List<string> list = ExtractFile(sourceFile, targetFile);
@@ -45,6 +52,11 @@ namespace Finding
             }
         }
 
+        /// <summary>
+        /// 解压缩函数
+        /// </summary>
+        /// <param name="sourceFile">文件流</param>
+        /// <param name="targetFile">解压后文件存放路径</param>
         public void extract(FileStream sourceFile, string targetFile)
         {
             List<string> list = ExtractFile(sourceFile.Name, targetFile);
@@ -91,6 +103,7 @@ namespace Finding
             }
             catch (Exception ex)
             {
+                Console.Out.WriteLine(ex.Message);
                 return null;
             }
         }
@@ -112,25 +125,14 @@ namespace Finding
 
         private bool isImage(string file)
         {
-            int index = file.LastIndexOf('.');
-            string fix = file.Substring(index + 1);
-            if (fix.Equals("jpg") || fix.Equals("png") || fix.Equals("gif"))
-            {
-                return true;
-            }
-            return false;
-
+            return file.Equals(".jpg") || file.EndsWith(".png")
+                                       || file.EndsWith(".gif") || file.EndsWith(".jpeg");
         }
 
         private bool isDocx(string file)
         {
-            int index = file.LastIndexOf('.');
-            string fix = file.Substring(index + 1);
-            if (fix.Equals("pdf") || fix.Equals("doc") || fix.Equals("excel") || fix.Equals("ppt") || fix.Equals("txt"))
-            {
-                return true;
-            }
-            return false;
+            return file.EndsWith(".pdf") || file.EndsWith(".doc") 
+                || file.EndsWith(".excel") || file.EndsWith(".ppt") || file.EndsWith(".txt");
         }
     }
 }
