@@ -27,7 +27,7 @@ namespace Finding
         private List<string> matchedFilenameList = new List<string>();
 
         // ListViewItem 绑定的数据，代表当前文件夹下的一个文件的信息
-        private class FileItemInfo
+        public class FileItemInfo
         {
             // 文件名
             public string Name { set; get; }
@@ -74,7 +74,7 @@ namespace Finding
             if (folderBrowserDialog.ShowDialog() == true)
             {
                 FilesListView.Items.Clear();
-                curDirPath = folderBrowserDialog.SelectedPath;
+                SetCurDir(folderBrowserDialog.SelectedPath);
                 string[] files = Directory.GetFiles(curDirPath, "*.*");
                 string[] subdirs = Directory.GetDirectories(curDirPath);
 
@@ -92,6 +92,11 @@ namespace Finding
             }
         }
 
+        public void SetCurDir(string d)
+        {
+            curDirPath = d;
+        }
+
         // 双击 ListViewItem 的事件处理函数，用于打开某个文件
         private void FileItem_DoubleClick(object sender, MouseButtonEventArgs e)
         {
@@ -102,21 +107,22 @@ namespace Finding
         // 单击 FindButton 的事件处理函数， 用于进行文件搜索
         private void FindButton_Click(object sender, RoutedEventArgs e)
         {
-            if (string.IsNullOrWhiteSpace(Txb_Search_Key.Text))
+            FilesListView.Items.Clear();
+            _PathFound.Clear();
+            Search(Txb_Search_Key.Text);
+        }
+
+        public void Search(string key)
+        {
+            if (string.IsNullOrWhiteSpace(key))
             {
                 // 提示不能为空
-
                 return;
             }
-
-            FilesListView.Items.Clear();
-            stopwatch.Start();
-
-            SearchInSelectedDir(curDirPath, Txb_Search_Key.Text);
-
-            stopwatch.Stop();
-            DispElapsedTime();
+            SearchInSelectedDir(curDirPath, key);
         }
+        // Debug Only
+        public List<string> _PathFound { get; } = new List<string>();
 
         /// <summary>
         /// 根据key搜索当前目录下匹配的文件
@@ -265,7 +271,7 @@ namespace Finding
                         {
                             FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filename));
                         }));
-
+                        _PathFound.Add(filename);
                     }
                 }
             });
@@ -310,7 +316,6 @@ namespace Finding
         {
             // 以秒为单位, 可修改
             Lbl_Used_Time.Content = string.Format("{0}s", stopwatch.Elapsed.TotalSeconds);
-            MessageBox.Show(Lbl_Used_Time.Content as string);
         }
 
         /// <summary>
