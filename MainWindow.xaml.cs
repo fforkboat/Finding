@@ -47,7 +47,7 @@ namespace Finding
         public MainWindow()
         {
             InitializeComponent();
-            ConnectRedis();
+            //ConnectRedis();
         }
 
         /// <summary>
@@ -139,17 +139,17 @@ namespace Finding
             SearchDocument(key);
             SearchImage(key);
             // 写回缓存
-            if (matchedFilenameList.Count > 0)
-            {
+            //if (matchedFilenameList.Count > 0)
+            //{
 
-                RedisHelper.Set(combinedKey, matchedFilenameList);
-                // DispMatchedFiles();
-            }
-            else
-            {
-                // 未搜索到匹配文件
-                // DispNotMatched();
-            }
+            //    RedisHelper.Set(combinedKey, matchedFilenameList);
+            //    // DispMatchedFiles();
+            //}
+            //else
+            //{
+            //    // 未搜索到匹配文件
+            //    // DispNotMatched();
+            //}
         }
 
         private void ZipFiles()
@@ -173,14 +173,15 @@ namespace Finding
             foreach (var filename in files)
             {
                 Console.WriteLine(filename);
-
+                ImageContainsKey(filename, key);
             }
 
         }
 
         private void SearchDocument(string key)
         {
-            string[] files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories);
+            var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories)
+                .Where(s => !s.EndsWith(".bmp") && !s.EndsWith(".jpg") && !s.EndsWith(".png") && !s.EndsWith(".jpeg"));
 
             foreach (var filename in files)
             {
@@ -198,13 +199,12 @@ namespace Finding
         private bool DocumentContainsKey(string filename, string key)
         {
             Process process = new Process();
-            string cmd = @"java -jar C:\Users\andys\source\repos\searchdocs\Csapp_ReadFile.jar";  //cmd命令
-            process.StartInfo.FileName = @"cmd.exe";
+            process.StartInfo.FileName = @"java";
             process.StartInfo.UseShellExecute = false;
             process.StartInfo.RedirectStandardInput = true;
             process.StartInfo.RedirectStandardOutput = true;
-            process.StartInfo.RedirectStandardError = true;
             process.StartInfo.CreateNoWindow = true;
+            process.StartInfo.Arguments = @"-jar C:\Users\andys\source\repos\searchdocs\Csapp_ReadFile.jar";
             process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
             {
                 if (!string.IsNullOrEmpty(e.Data) && e.Data.Length == 1)
@@ -221,18 +221,61 @@ namespace Finding
                         }));
 
                     }
+                    process.Kill();
                 }
-
             });
 
             process.Start();//启动程序
             process.BeginOutputReadLine();
             process.StandardInput.AutoFlush = true;
-            process.StandardInput.WriteLine(cmd); //向cmd窗口写入命令
             process.StandardInput.WriteLine(filename);
             process.StandardInput.WriteLine(key);
-
+            process.WaitForExit();
             process.Close();
+            return true;
+        }
+
+        /// <summary>
+        /// 调用外部函数
+        /// </summary>
+        /// <param name="filename">待匹配文件</param>
+        /// <param name="key">待搜索键</param>
+        /// <returns></returns>
+        private bool ImageContainsKey(string filename, string key)
+        {
+            var oriDir = Directory.GetCurrentDirectory();
+            Directory.SetCurrentDirectory(@"C:\Users\andys\source\repos\searchimg2\searchimg2");
+            Process process = new Process();
+            process.StartInfo.FileName = @"searchimg2.exe";
+            process.StartInfo.UseShellExecute = false;
+            process.StartInfo.RedirectStandardInput = true;
+            process.StartInfo.RedirectStandardOutput = true;
+            process.StartInfo.CreateNoWindow = true;
+            process.OutputDataReceived += new DataReceivedEventHandler((sender, e) =>
+            {
+                if (!string.IsNullOrEmpty(e.Data))
+                {
+                    if (e.Data == "True")
+                    {
+                        Console.WriteLine(e.Data);
+                        FileInfo fileInfo = new FileInfo(filename);
+                        matchedFilenameList.Add(filename);
+
+                        FilesListView.Dispatcher.BeginInvoke(new Action(() =>
+                        {
+                            FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filename));
+                        }));
+
+                    }
+                }
+            });
+
+            process.Start();//启动程序
+            process.BeginOutputReadLine();
+            process.StandardInput.AutoFlush = true;
+            process.StandardInput.WriteLine(filename);
+            process.StandardInput.WriteLine(key);
+            process.WaitForExit();
             return true;
         }
 
@@ -267,7 +310,7 @@ namespace Finding
         {
             // 以秒为单位, 可修改
             Lbl_Used_Time.Content = string.Format("{0}s", stopwatch.Elapsed.TotalSeconds);
-
+            MessageBox.Show(Lbl_Used_Time.Content as string);
         }
 
         /// <summary>
