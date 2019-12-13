@@ -16,10 +16,22 @@ namespace Finding
     /// </summary>
     public partial class MainWindow : MetroWindow
     {
-        // 记录耗时
-        private System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+        // For Test Only, DO NOT Delete
+        public class _TestRecordC
+        {
+            public long Total { get; set; }
+            public long Zip { get; set; }
+            public long Doc { get; set; }
+            public long Img { get; set; }
+            public List<string> ZipSearched { get; } = new List<string>();
+            public List<string> DocSearched { get; } = new List<string>();
+            public List<string> ImgSearched { get; } = new List<string>();
+        }
+        public _TestRecordC TestRecord { get; } = new _TestRecordC();
+        public List<string> _PathFound { get; } = new List<string>();
+
         // redis配置
-        private const string redisConnStr = "127.0.0.1:6379,password=,DefaultDatabase=0";
+        //private const string redisConnStr = "127.0.0.1:6379,password=,DefaultDatabase=0";
         // 当前目录
         private string curDirPath;
 
@@ -53,19 +65,19 @@ namespace Finding
         /// <summary>
         /// 连接redis
         /// </summary>
-        private void ConnectRedis()
-        {
-            try
-            {
-                RedisHelper.SetCon(redisConnStr);
-                MessageBox.Show("连接redis成功");
-            }
-            catch (Exception ex)
-            {
-                MessageBox.Show(ex.Message);
-                throw;
-            }
-        }
+        //private void ConnectRedis()
+        //{
+        //    try
+        //    {
+        //        RedisHelper.SetCon(redisConnStr);
+        //        MessageBox.Show("连接redis成功");
+        //    }
+        //    catch (Exception ex)
+        //    {
+        //        MessageBox.Show(ex.Message);
+        //        throw;
+        //    }
+        //}
 
         // 点击 OpenDirectoryMenuItem 的事件处理函数，用于打开一个文件夹
         private void OpenDirectoryMenuItem_Click(object sender, RoutedEventArgs e)
@@ -101,7 +113,7 @@ namespace Finding
         private void FileItem_DoubleClick(object sender, MouseButtonEventArgs e)
         {
             var fileItemInfo = ((ListViewItem)sender).Content as FileItemInfo;
-            System.Diagnostics.Process.Start(fileItemInfo.Path);
+            Process.Start(fileItemInfo.Path);
         }
 
         // 单击 FindButton 的事件处理函数， 用于进行文件搜索
@@ -119,11 +131,11 @@ namespace Finding
                 // 提示不能为空
                 return;
             }
+            var sw = Stopwatch.StartNew();
             SearchInSelectedDir(curDirPath, key);
+            sw.Stop();
+            TestRecord.Total = sw.ElapsedMilliseconds;
         }
-        // Debug Only
-        public List<string> _PathFound { get; } = new List<string>();
-
         /// <summary>
         /// 根据key搜索当前目录下匹配的文件
         /// </summary>
@@ -131,8 +143,8 @@ namespace Finding
         /// <param name="key">搜索关键字</param>
         private void SearchInSelectedDir(string dir, string key)
         {
-            string combinedKey = GetCombinedKey(key);
- 
+            //string combinedKey = GetCombinedKey(key);
+
             //             matchedFilenameList.Clear();
             //             if (RedisHelper.Exists(combinedKey))
             //             {
@@ -141,9 +153,20 @@ namespace Finding
             //                 return;
             //             }
 
+            var sw = Stopwatch.StartNew();
             ZipFiles();
+            sw.Stop();
+            TestRecord.Zip = sw.ElapsedMilliseconds;
+
+            sw = Stopwatch.StartNew();
             SearchDocument(key);
+            sw.Stop();
+            TestRecord.Doc = sw.ElapsedMilliseconds;
+
+            sw = Stopwatch.StartNew();
             SearchImage(key);
+            sw.Stop();
+            TestRecord.Img = sw.ElapsedMilliseconds;
             // 写回缓存
             //if (matchedFilenameList.Count > 0)
             //{
@@ -164,6 +187,7 @@ namespace Finding
             var zipper = new Ziper();
             foreach (var file in files)
             {
+                TestRecord.ZipSearched.Add(file);
                 var target = file.Substring(0, file.LastIndexOf('\\'));
                 zipper.extract(file, target);
             }
@@ -178,6 +202,7 @@ namespace Finding
                 .Where(s => s.EndsWith(".bmp") || s.EndsWith(".jpg") || s.EndsWith(".png") || s.EndsWith(".jpeg"));
             foreach (var filename in files)
             {
+                TestRecord.ImgSearched.Add(filename);
                 Console.WriteLine(filename);
                 ImageContainsKey(filename, key);
             }
@@ -187,10 +212,11 @@ namespace Finding
         private void SearchDocument(string key)
         {
             var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories)
-                .Where(s => !s.EndsWith(".bmp") && !s.EndsWith(".jpg") && !s.EndsWith(".png") && !s.EndsWith(".jpeg"));
+                .Where(s => !s.EndsWith(".zip") && !s.EndsWith(".bmp") && !s.EndsWith(".jpg") && !s.EndsWith(".png") && !s.EndsWith(".jpeg"));
 
             foreach (var filename in files)
             {
+                TestRecord.DocSearched.Add(filename);
                 Console.WriteLine(filename);
                 DocumentContainsKey(filename, key);
             }
@@ -290,41 +316,41 @@ namespace Finding
         /// </summary>
         /// <param name="key"></param>
         /// <returns></returns>
-        private string GetCombinedKey(string key)
-        {
-            return curDirPath + ":" + key;
-        }
+        //private string GetCombinedKey(string key)
+        //{
+        //    return curDirPath + ":" + key;
+        //}
 
         /// <summary>
         /// 显示匹配文件
         /// </summary>
-        private void DispMatchedFiles()
-        {
-            foreach (var filename in matchedFilenameList)
-            {
-                FileInfo fileInfo = new FileInfo(filename);
-                FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filename));
-            }
-        }
+        //private void DispMatchedFiles()
+        //{
+        //    foreach (var filename in matchedFilenameList)
+        //    {
+        //        FileInfo fileInfo = new FileInfo(filename);
+        //        FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filename));
+        //    }
+        //}
 
 
 
         /// <summary>
         /// 显示搜索耗时
         /// </summary>
-        private void DispElapsedTime()
-        {
-            // 以秒为单位, 可修改
-            Lbl_Used_Time.Content = string.Format("{0}s", stopwatch.Elapsed.TotalSeconds);
-        }
+        //private void DispElapsedTime()
+        //{
+        //    // 以秒为单位, 可修改
+        //    Lbl_Used_Time.Content = string.Format("{0}s", stopwatch.Elapsed.TotalSeconds);
+        //}
 
         /// <summary>
         /// 未搜索到提示
         /// </summary>
-        private void DispNotMatched()
-        {
+        //private void DispNotMatched()
+        //{
 
-        }
+        //}
 
     }
 }
