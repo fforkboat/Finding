@@ -19,10 +19,10 @@ namespace Finding
         // For Test Only, DO NOT Delete
         public class _TestRecordC
         {
-            public long Total { get; set; }
-            public long Zip { get; set; }
-            public long Doc { get; set; }
-            public long Img { get; set; }
+            public double Total { get; set; }
+            public double Zip { get; set; }
+            public double Doc { get; set; }
+            public double Img { get; set; }
             public List<string> ZipSearched { get; } = new List<string>();
             public List<string> DocSearched { get; } = new List<string>();
             public List<string> ImgSearched { get; } = new List<string>();
@@ -134,7 +134,7 @@ namespace Finding
             var sw = Stopwatch.StartNew();
             SearchInSelectedDir(curDirPath, key);
             sw.Stop();
-            TestRecord.Total = sw.ElapsedMilliseconds;
+            TestRecord.Total = sw.Elapsed.TotalMilliseconds * 1e6;
         }
         /// <summary>
         /// 根据key搜索当前目录下匹配的文件
@@ -156,17 +156,17 @@ namespace Finding
             var sw = Stopwatch.StartNew();
             ZipFiles();
             sw.Stop();
-            TestRecord.Zip = sw.ElapsedMilliseconds;
+            TestRecord.Zip = sw.Elapsed.TotalMilliseconds * 1e6;
 
             sw = Stopwatch.StartNew();
             SearchDocument(key);
             sw.Stop();
-            TestRecord.Doc = sw.ElapsedMilliseconds;
+            TestRecord.Doc = sw.Elapsed.TotalMilliseconds * 1e6;
 
             sw = Stopwatch.StartNew();
             SearchImage(key);
             sw.Stop();
-            TestRecord.Img = sw.ElapsedMilliseconds;
+            TestRecord.Img = sw.Elapsed.TotalMilliseconds * 1e6;
             // 写回缓存
             //if (matchedFilenameList.Count > 0)
             //{
@@ -251,7 +251,7 @@ namespace Finding
                         {
                             FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filename));
                         }));
-
+                        _PathFound.Add(filename);
                     }
                     process.Kill();
                 }
