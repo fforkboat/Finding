@@ -113,7 +113,7 @@ namespace Finding
             }
 
             FilesListView.Items.Clear();
-            stopwatch.Start();
+            
 
             SearchInSelectedDir(curDirPath, Txb_Search_Key.Text);
 
@@ -128,15 +128,20 @@ namespace Finding
         /// <param name="key">搜索关键字</param>
         private void SearchInSelectedDir(string dir, string key)
         {
+            stopwatch.Start();
+
             string combinedKey = GetCombinedKey(key);
 
-            //             matchedFilenameList.Clear();
-            //             if (RedisHelper.Exists(combinedKey))
-            //             {
-            //                 matchedFilenameList = RedisHelper.Get<List<string>>(combinedKey);
-            //                 DispMatchedFiles();
-            //                 return;
-            //             }
+            if (RedisHelper.Exists(combinedKey))
+            {
+                stopwatch.Stop();
+                DispElapsedTime();
+                MessageBox.Show("从缓存获取成功");
+                matchedFilenameList = RedisHelper.ListGet<string>(combinedKey);
+                DispMatchedFiles();
+                return;
+            }
+
             var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories);
             ZipFiles();
             foreach (var filename in files)
@@ -151,19 +156,8 @@ namespace Finding
                 }
 
             }
-            
-            // 写回缓存
-            if (matchedFilenameList.Count > 0)
-            {
-
-                RedisHelper.Set(combinedKey, matchedFilenameList);
-                // DispMatchedFiles();
-            }
-            else
-            {
-                // 未搜索到匹配文件
-                // DispNotMatched();
-            }
+            stopwatch.Stop();
+            DispElapsedTime();
         }
 
 
@@ -198,10 +192,10 @@ namespace Finding
         /// <summary>
         /// 调用外部函数
         /// </summary>
-        /// <param name="filename">待匹配文件</param>
+        /// <param name="filepath">待匹配文件</param>
         /// <param name="key">待搜索键</param>
         /// <returns></returns>
-        private bool DocumentContainsKey(string filename, string key)
+        private bool DocumentContainsKey(string filepath, string key)
         {
             Process process = new Process();
             string cmd = DOC_EXE;
@@ -217,13 +211,13 @@ namespace Finding
                 {
                     if (e.Data != "0")
                     {
-                        Console.WriteLine(e.Data);
-                        FileInfo fileInfo = new FileInfo(filename);
-                        matchedFilenameList.Add(filename);
+                        FileInfo fileInfo = new FileInfo(filepath);
+                        // 存入redis缓存
+                        RedisHelper.ListPush(GetCombinedKey(key), filepath);
 
                         FilesListView.Dispatcher.BeginInvoke(new Action(() =>
                         {
-                            FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filename));
+                            FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filepath));
                         }));
 
                     }
@@ -235,7 +229,7 @@ namespace Finding
             process.BeginOutputReadLine();
             process.StandardInput.AutoFlush = true;
             process.StandardInput.WriteLine(cmd); //向cmd窗口写入命令
-            process.StandardInput.WriteLine(filename);
+            process.StandardInput.WriteLine(filepath);
             process.StandardInput.WriteLine(key);
 
             process.Close();

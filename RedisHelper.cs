@@ -141,6 +141,30 @@ namespace Finding
         }
 
         /// <summary>
+        /// 存入列表
+        /// </summary>
+        public static void ListPush(string key, object value)
+        {
+            GetDatabase().ListRightPush(key, Serialize(value));
+        }
+
+        /// <summary>
+        /// 取出列表
+        /// </summary>
+        public static List<T> ListGet<T>(string key)
+        {
+            var vList = GetDatabase().ListRange(key);
+            List<T> result = new List<T>();
+            foreach (var item in vList)
+            {
+                T model = Deserialize<T>(item);
+                result.Add(model);
+            }
+            return result;
+        }
+
+
+        /// <summary>
         /// 异步设置
         /// </summary>
         public static async Task SetAsync(string key, object value)
