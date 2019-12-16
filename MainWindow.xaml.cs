@@ -51,6 +51,7 @@ namespace Finding
         {
             InitializeComponent();
             ConnectRedis();
+            ESHelper.InitES();
         }
 
         /// <summary>
