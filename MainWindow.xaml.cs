@@ -78,8 +78,24 @@ namespace Finding
             {
                 FilesListView.Items.Clear();
                 curDirPath = folderBrowserDialog.SelectedPath;
-                string[] files = Directory.GetFiles(curDirPath, "*.*");
-                string[] subdirs = Directory.GetDirectories(curDirPath);
+
+                string[] files = null;
+                string[] subdirs = null;
+                string filesKey = "files:" + curDirPath;
+                string subdirsKey = "subdirs:" + curDirPath;
+
+                if (RedisHelper.Exists(filesKey))
+                {
+                    files = (string[])RedisHelper.Get(filesKey);
+                    subdirs = (string[])RedisHelper.Get(subdirsKey);
+                }
+                else
+                {
+                    files = Directory.GetFiles(curDirPath, "*.*");
+                    RedisHelper.Set(filesKey, files);
+                    subdirs = Directory.GetDirectories(curDirPath);
+                    RedisHelper.Set(subdirsKey, subdirs);
+                }
 
                 foreach (var file in files)
                 {
