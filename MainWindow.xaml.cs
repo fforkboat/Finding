@@ -171,7 +171,10 @@ namespace Finding
             }
 
             var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories);
-            ZipFiles();
+            
+            Ziper zip = new Ziper();
+            zip.extract(dir);
+
             foreach (var filename in files)
             {
                 if (IsImageFile(filename))
@@ -184,6 +187,8 @@ namespace Finding
                 }
 
             }
+
+            zip.ClearFile();
             stopwatch.Stop();
             DispElapsedTime();
         }
@@ -201,19 +206,6 @@ namespace Finding
         {
             return filename.EndsWith(".jpg") || filename.EndsWith(".jpeg")
                 || filename.EndsWith(".bmp") || filename.EndsWith(".png");
-        }
-
-
-
-        private void ZipFiles()
-        {
-            var files = Directory.GetFiles(curDirPath, "*.zip", SearchOption.AllDirectories);
-            var zipper = new Ziper();
-            foreach (var file in files)
-            {
-                var target = file.Substring(0, file.LastIndexOf('\\'));
-                zipper.extract(file, target);
-            }
         }
 
         /// <summary>
