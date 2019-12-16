@@ -110,6 +110,7 @@
       <Generator>MSBuild:Compile</Generator>
       <SubType>Designer</SubType>
     </ApplicationDefinition>
+    <Compile Include="MD5Checker.cs" />
     <Compile Include="RedisHelper.cs" />
     <Compile Include="ziper.cs" />
     <Page Include="MainWindow.xaml">

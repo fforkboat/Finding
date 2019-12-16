@@ -61,7 +61,7 @@ namespace Finding
             try
             {
                 RedisHelper.SetCon(redisConnStr);
-                MessageBox.Show("连接redis成功");
+                //MessageBox.Show("连接redis成功");
             }
             catch (Exception ex)
             {
@@ -114,7 +114,6 @@ namespace Finding
 
             FilesListView.Items.Clear();
             
-
             SearchInSelectedDir(curDirPath, Txb_Search_Key.Text);
 
             stopwatch.Stop();
@@ -138,6 +137,18 @@ namespace Finding
                 DispElapsedTime();
                 MessageBox.Show("从缓存获取成功");
                 matchedFilenameList = RedisHelper.ListGet<string>(combinedKey);
+                foreach(string matchedPath in matchedFilenameList)
+                {
+                    // 判断文件更新
+                    string oriMD5 = RedisHelper.Get<string>(GetMD5Key(matchedPath));
+                    string curMD5 = MD5Checker.GetFileMD5(matchedPath);
+                    if(oriMD5 != curMD5)
+                    {
+                        // 摘要发生变化
+                        // todo 移除缓存
+                        RenewFile(matchedPath, key);
+                    }
+                }
                 DispMatchedFiles();
                 return;
             }
@@ -188,6 +199,17 @@ namespace Finding
             }
         }
 
+        /// <summary>
+        /// 更新文件缓存
+        /// 只针对文档文件
+        /// 图片通常不考虑更新
+        /// </summary>
+        /// <param name="matchedPath"></param>
+        private void RenewFile(string matchedPath, string key)
+        {
+            DocumentContainsKey(matchedPath, key);
+        }
+
 
         /// <summary>
         /// 调用外部函数
@@ -195,7 +217,7 @@ namespace Finding
         /// <param name="filepath">待匹配文件</param>
         /// <param name="key">待搜索键</param>
         /// <returns></returns>
-        private bool DocumentContainsKey(string filepath, string key)
+        private void DocumentContainsKey(string filepath, string key)
         {
             Process process = new Process();
             string cmd = DOC_EXE;
@@ -214,7 +236,8 @@ namespace Finding
                         FileInfo fileInfo = new FileInfo(filepath);
                         // 存入redis缓存
                         RedisHelper.ListPush(GetCombinedKey(key), filepath);
-
+                        // 存入文件MD5摘要
+                        RedisHelper.Set(GetMD5Key(filepath), MD5Checker.GetFileMD5(filepath));
                         FilesListView.Dispatcher.BeginInvoke(new Action(() =>
                         {
                             FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filepath));
@@ -233,7 +256,6 @@ namespace Finding
             process.StandardInput.WriteLine(key);
 
             process.Close();
-            return true;
         }
 
 
@@ -255,6 +277,17 @@ namespace Finding
         private string GetCombinedKey(string key)
         {
             return curDirPath + ":" + key;
+        }
+        
+        
+        /// <summary>
+        /// 获取路径的md5的组合键
+        /// </summary>
+        /// <param name="key"></param>
+        /// <returns></returns>
+        private string GetMD5Key(string path)
+        {
+            return "MD5:" + path;
         }
 
         /// <summary>
@@ -280,14 +313,5 @@ namespace Finding
             Lbl_Used_Time.Content = string.Format("{0}s", stopwatch.Elapsed.TotalSeconds);
 
         }
-
-        /// <summary>
-        /// 未搜索到提示
-        /// </summary>
-        private void DispNotMatched()
-        {
-
-        }
-
     }
 }
