@@ -3,8 +3,6 @@ using System;
 using System.Collections.Generic;
 using System.Diagnostics;
 using System.IO;
-using System.Linq;
-using System.Threading;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
@@ -172,6 +170,7 @@ namespace Finding
 
             var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories);
             
+            //提前解压缩
             Ziper zip = new Ziper();
             zip.extract(dir);
 
@@ -185,14 +184,12 @@ namespace Finding
                 {
                     DocumentContainsKey(filename, key);
                 }
-
             }
-
+            //清除被解压的文件夹
             zip.ClearFile();
             stopwatch.Stop();
             DispElapsedTime();
         }
-
 
         private bool IsDocFile(string filename)
         {
@@ -242,6 +239,7 @@ namespace Finding
                 {
                     if (e.Data != "0")
                     {
+                        //todo ziper
                         FileInfo fileInfo = new FileInfo(filepath);
                         // 存入redis缓存
                         RedisHelper.ListPush(GetCombinedKey(key), filepath);
@@ -251,10 +249,8 @@ namespace Finding
                         {
                             FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filepath));
                         }));
-
                     }
                 }
-
             });
 
             process.Start();//启动程序
@@ -287,8 +283,7 @@ namespace Finding
         {
             return curDirPath + ":" + key;
         }
-        
-        
+
         /// <summary>
         /// 获取路径的md5的组合键
         /// </summary>
