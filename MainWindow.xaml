@@ -8,7 +8,7 @@
                       xmlns:materialDesign="http://materialdesigninxaml.net/winfx/xaml/themes"
                       mc:Ignorable="d"
         xmlns:md="http://materialdesigninxaml.net/winfx/xaml/themes"
-        Title="Finding" Height="491.6" Width="776.8"
+        Title="Finding" Height="522.8" Width="776.8"
         TextElement.Foreground="{DynamicResource MaterialDesignBody}"
         Background="{DynamicResource MaterialDesignPaper}"
         ShowTitleBar="True"
@@ -77,7 +77,7 @@
            
         </StackPanel>
         <Label Content="Used Time: "  Margin="10,455,0,0"/>
-        <Label x:Name="Lbl_Used_Time" Content="0s"  Margin="90,455,0,0"/>
+        <Label x:Name="Lbl_Used_Time" Content="0s"  Margin="90,455,0.4,36.8"/>
     </Grid>
 
 </Controls:MetroWindow>

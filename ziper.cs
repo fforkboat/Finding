@@ -11,31 +11,14 @@ namespace Finding
     /// </summary>
     public class Ziper
     {
-        private List<string> docxList;
-        private List<string> imageList;
-
-        public Ziper()
-        {
-            docxList = new List<string>();
-            imageList = new List<string>();
-        }
+        private string removeFile;
 
         /// <summary>
-        /// 获得递归解压后文件中的doc、pdf等文件的绝对路径
+        /// 删除解压后的文件
         /// </summary>
-        /// <returns>文件路径的List</returns>
-        public List<string> GetDocxList()
+        public void ClearFile()
         {
-            return docxList;
-        }
-
-        /// <summary>
-        /// 获得递归解压后文件中的image等文件的绝对路径
-        /// </summary>
-        /// <returns>照片路径的List</returns>
-        public List<string> GetImageList()
-        {
-            return imageList;
+            new DirectoryInfo(removeFile).Delete(true);
         }
 
         /// <summary>
@@ -43,13 +26,12 @@ namespace Finding
         /// </summary>
         /// <param name="sourceFile">目标路径</param>
         /// <param name="targetFile">解压后文件存放路径</param>
-        public void extract(string sourceFile, string targetFile)
+        public void extract(string sourceFile)
         {
-            List<string> list = ExtractFile(sourceFile, targetFile);
-            if (list != null)
-            {
-                init(list);
-            }
+            var files = Directory.GetFiles(sourceFile, "*.zip", SearchOption.AllDirectories);
+            var target = sourceFile + Guid.NewGuid();
+            removeFile = target;
+            foreach (var file in files) ExtractFile(file, target);
         }
 
         /// <summary>
@@ -57,82 +39,36 @@ namespace Finding
         /// </summary>
         /// <param name="sourceFile">文件流</param>
         /// <param name="targetFile">解压后文件存放路径</param>
-        public void extract(FileStream sourceFile, string targetFile)
+        public void extract(FileStream sourceFile)
         {
-            List<string> list = ExtractFile(sourceFile.Name, targetFile);
-            if (list != null)
-            {
-                init(list);
-            }
+            extract(sourceFile.Name);
         }
 
-        private List<string> ExtractFile(string sourceFileFullPath, string targetFolderPath)
+        private void ExtractFile(string sourceFileFullPath, string targetFolderPath)
         {
             try
             {
                 var encoding = Encoding.Default;
-                var options = new ReadOptions { Encoding = encoding };
-                List<string> filesInfo = new List<string>();
+                var options = new ReadOptions {Encoding = encoding};
                 using (var zip = ZipFile.Read(sourceFileFullPath, options))
                 {
                     zip.AlternateEncoding = encoding;
                     zip.ExtractAll(targetFolderPath, ExtractExistingFileAction.OverwriteSilently); //一次批量解压
                     foreach (var s in zip.EntryFileNames)
-                    {
-                        int index = s.IndexOf(".zip", StringComparison.Ordinal);
-                        if (index == -1)
+                        if (s.EndsWith(".zip"))
                         {
-                            filesInfo.Add(targetFolderPath + '\\' + s);
-                        }
-                        else
-                        {
-                            //
-                            string file = s.Substring(0, s.LastIndexOf('/'));
+                            var file = s.Substring(0, s.LastIndexOf('/'));
                             //递归去解决其子文件
-                            string source = targetFolderPath + '\\' + s;
-                            string target = targetFolderPath + '\\' + file;
-                            List<string> strs = ExtractFile(source, target);
-                            if (strs != null)
-                            {
-                                filesInfo.AddRange(strs);
-                            }
+                            var source = targetFolderPath + '\\' + s;
+                            var target = targetFolderPath + '\\' + file;
+                            ExtractFile(source, target);
                         }
-                    }
-                    return filesInfo;
                 }
             }
             catch (Exception ex)
             {
                 Console.Out.WriteLine(ex.Message);
-                return null;
             }
-        }
-
-        private void init(List<string> filesInfo)
-        {
-            foreach (string name in filesInfo)
-            {
-                if (isImage(name))
-                {
-                    imageList.Add(name);
-                }
-                else if (isDocx(name))
-                {
-                    docxList.Add(name);
-                }
-            }
-        }
-
-        private bool isImage(string file)
-        {
-            return file.Equals(".jpg") || file.EndsWith(".png")
-                                       || file.EndsWith(".gif") || file.EndsWith(".jpeg");
-        }
-
-        private bool isDocx(string file)
-        {
-            return file.EndsWith(".pdf") || file.EndsWith(".doc") 
-                || file.EndsWith(".excel") || file.EndsWith(".ppt") || file.EndsWith(".txt");
         }
     }
 }
