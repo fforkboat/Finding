@@ -35,12 +35,19 @@ namespace Finding
         /// </summary>
         /// <param name="sourceFile">目标路径</param>
         /// <param name="targetFile">解压后文件存放路径</param>
-        public void extract(string sourceFile)
+        /// returns zips' names which are processed from @sourceFile dir
+        public List<string> extract(string sourceFile)
         {
+            var zipnames = new List<string>();
             var files = Directory.GetFiles(sourceFile, "*.zip", SearchOption.AllDirectories);
+            zipnames.AddRange(files);
             var target = sourceFile + @"\" + Guid.NewGuid();
             removeFile = target;
-            foreach (var file in files) ExtractFile(file, target, file);
+            foreach (var file in files)
+            {
+                zipnames.AddRange(ExtractFile(file, target, file));
+            }
+            return zipnames;
         }
 
         /// <summary>
@@ -48,13 +55,16 @@ namespace Finding
         /// </summary>
         /// <param name="sourceFile">文件流</param>
         /// <param name="targetFile">解压后文件存放路径</param>
-        public void extract(FileStream sourceFile)
+        /// returns zips' names which are processed from @sourceFile dir
+        public List<string> extract(FileStream sourceFile)
         {
-            extract(sourceFile.Name);
+            return extract(sourceFile.Name);
         }
 
-        private void ExtractFile(string sourceFileFullPath, string targetFolderPath, string originalPath)
+        /// returns child zips' names which are processed from @sourceFileFullPath zip file
+        private List<string> ExtractFile(string sourceFileFullPath, string targetFolderPath, string originalPath)
         {
+            var zipnames = new List<string>();
             try
             {
                 var encoding = Encoding.Default;
@@ -68,14 +78,13 @@ namespace Finding
                         {
                             //递归去解决其子文件
                             var source = targetFolderPath + @"\" + s;
-                            ExtractFile(source, targetFolderPath, originalPath);
+                            zipnames.AddRange(ExtractFile(source, targetFolderPath, originalPath));
                         }
                         else
                         {
                             if (!s.EndsWith("/"))
                             {
                                 table.Add(targetFolderPath + @"\" + s, originalPath);
-
                             }
                         }
                 }
@@ -84,6 +93,7 @@ namespace Finding
             {
                 Console.Out.WriteLine(ex.Message);
             }
+            return zipnames;
         }
     }
 }

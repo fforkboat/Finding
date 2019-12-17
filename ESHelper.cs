@@ -34,7 +34,7 @@ namespace Finding
             var response = client.Search<RecordFile>(s => s.From(0).Size(10)
                 .Index(DEFAULT_INDEX)
                 .Query(q => q.Match(
-                    mq => mq.Field(f => f.Content).Query(key)
+                        mq => mq.Field(f => f.Content).Query(key)
                     )
                 )
             );
