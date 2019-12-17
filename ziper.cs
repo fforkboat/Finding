@@ -15,6 +15,8 @@ namespace Finding
         private string removeFile;
         private Dictionary<string, string> table;
 
+        public Dictionary<string, string> Table { get; set; }
+
         public Ziper()
         {
             table = new Dictionary<string, string>();

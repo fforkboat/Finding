@@ -27,6 +27,9 @@ namespace Finding
         // 已匹配列表
         private List<string> matchedFilenameList = new List<string>();
 
+        //已搜索的zip文件
+        private HashSet<string> listSet = new HashSet<string>();
+
         // ListViewItem 绑定的数据，代表当前文件夹下的一个文件的信息
         private class FileItemInfo
         {
@@ -171,8 +174,8 @@ namespace Finding
             var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories);
             
             //提前解压缩
-            Ziper zip = new Ziper();
-            zip.extract(dir);
+            Ziper ziper= new Ziper();
+            ziper.extract(dir);
 
             foreach (var filename in files)
             {
@@ -182,11 +185,11 @@ namespace Finding
                 }
                 else if (IsDocFile(filename))
                 {
-                    DocumentContainsKey(filename, key);
+                    DocumentContainsKey(filename, key, ziper.Table);
                 }
             }
             //清除被解压的文件夹
-            zip.ClearFile();
+            ziper.ClearFile();
             stopwatch.Stop();
             DispElapsedTime();
         }
@@ -213,6 +216,7 @@ namespace Finding
         /// <param name="matchedPath"></param>
         private void RenewFile(string matchedPath, string key)
         {
+            //todo 
             DocumentContainsKey(matchedPath, key);
         }
 
@@ -223,7 +227,7 @@ namespace Finding
         /// <param name="filepath">待匹配文件</param>
         /// <param name="key">待搜索键</param>
         /// <returns></returns>
-        private void DocumentContainsKey(string filepath, string key)
+        private void DocumentContainsKey(string filepath, string key, Dictionary<string,string> zipDic)
         {
             Process process = new Process();
             string cmd = DOC_EXE;
@@ -239,16 +243,36 @@ namespace Finding
                 {
                     if (e.Data != "0")
                     {
-                        //todo ziper
+                        //转为.zip路径
+                        bool isContained = false;
+                        if (zipDic.ContainsKey(filepath))
+                        {
+                            filepath = zipDic[filepath];
+                            if (listSet.Contains(filepath))
+                            {
+                                isContained = true;
+                            }
+                            else
+                            {
+                                //更新list中的.zip路径
+                                listSet.Add(filepath);
+                            }
+                        }
+
                         FileInfo fileInfo = new FileInfo(filepath);
                         // 存入redis缓存
                         RedisHelper.ListPush(GetCombinedKey(key), filepath);
                         // 存入文件MD5摘要
                         RedisHelper.Set(GetMD5Key(filepath), MD5Checker.GetFileMD5(filepath));
-                        FilesListView.Dispatcher.BeginInvoke(new Action(() =>
+
+                        //如果.zip目录不在list中，加入UI
+                        if (!isContained)
                         {
-                            FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filepath));
-                        }));
+                            FilesListView.Dispatcher.BeginInvoke(new Action(() =>
+                            {
+                                FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", filepath));
+                            }));
+                        }
                     }
                 }
             });
