@@ -15,7 +15,7 @@ namespace Finding
     public partial class MainWindow : MetroWindow
     {
         // 记录耗时
-        private System.Diagnostics.Stopwatch stopwatch = new System.Diagnostics.Stopwatch();
+        private Stopwatch stopwatch = new Stopwatch();
         // redis配置
         private const string redisConnStr = "127.0.0.1:6379,password=,DefaultDatabase=0";
         // 文档搜索
