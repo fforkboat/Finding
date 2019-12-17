@@ -217,7 +217,7 @@ namespace Finding
         private void RenewFile(string matchedPath, string key)
         {
             //todo 
-            DocumentContainsKey(matchedPath, key);
+            DocumentContainsKey(matchedPath, key, new Dictionary<string, string>());
         }
 
 

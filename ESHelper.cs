@@ -36,8 +36,8 @@ namespace Finding
                 .Query(q => q.Match(
                     mq => mq.Field(f => f.Content).Query(key)
                     )
-                 )
-                );
+                )
+            );
             Console.WriteLine(JsonConvert.SerializeObject(response.Documents));
         }
     }
