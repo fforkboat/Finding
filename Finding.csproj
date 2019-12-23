@@ -130,5 +130,11 @@
       <Version>2.0.601</Version>
     </PackageReference>
   </ItemGroup>
+  <ItemGroup>
+    <ProjectReference Include="..\findexor\libfindexor\libfindexor.csproj">
+      <Project>{7f22e00d-06de-428f-be32-c5622f5fac84}</Project>
+      <Name>libfindexor</Name>
+    </ProjectReference>
+  </ItemGroup>
   <Import Project="$(MSBuildToolsPath)\Microsoft.CSharp.targets" />
 </Project>

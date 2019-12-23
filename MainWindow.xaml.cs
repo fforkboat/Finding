@@ -1,4 +1,6 @@
-﻿using MahApps.Metro.Controls;
+﻿using libfindexor;
+using MahApps.Metro.Controls;
+using Nest;
 using System;
 using System.Collections.Generic;
 using System.Diagnostics;
@@ -34,14 +36,23 @@ namespace Finding
         // redis配置
         private const string redisConnStr = "127.0.0.1:6379,password=,DefaultDatabase=0";
 
+        // ES配置
+        static readonly string defaultESIndex = "findexor";
+        private ElasticClient escli = null;
+
+        // 根目录
+        static readonly string rootDir = @"c:\users\andys";
+
         // 当前目录
-        private string curDirPath;
+        private string curDir = null;
 
         // 已匹配列表
         private List<string> matchedFilenameList = new List<string>();
 
         //已搜索的zip文件
         private HashSet<string> listSet = new HashSet<string>();
+
+        static readonly string zipExtractSuffix = "_zip_extracted_findexor";
 
         // ListViewItem 绑定的数据，代表当前文件夹下的一个文件的信息
         private class FileItemInfo
@@ -63,8 +74,9 @@ namespace Finding
         public MainWindow()
         {
             InitializeComponent();
-            ConnectRedis();
-            ESHelper.InitES();
+            //ConnectRedis();
+            ConnectES();
+            //ESHelper.InitES();
         }
         /// <summary>
         /// 连接redis
@@ -81,55 +93,87 @@ namespace Finding
                 throw;
             }
         }
+        private void ConnectES()
+        {
+            var node = new Uri("http://localhost:9200");
+            var settings = new ConnectionSettings(node);
+            settings.DefaultIndex(defaultESIndex);
+            escli = new ElasticClient(settings);
+
+            if (!escli.Indices.Exists(defaultESIndex).Exists)
+            {
+                throw new InvalidOperationException(string.Format("index {0} not found.", defaultESIndex));
+            }
+        }
         // 点击 OpenDirectoryMenuItem 的事件处理函数，用于打开一个文件夹
         private void OpenDirectoryMenuItem_Click(object sender, RoutedEventArgs e)
         {
             Ookii.Dialogs.Wpf.VistaFolderBrowserDialog folderBrowserDialog = new Ookii.Dialogs.Wpf.VistaFolderBrowserDialog();
             if (folderBrowserDialog.ShowDialog() == true)
             {
-                OpenDirectory(folderBrowserDialog.SelectedPath);
+                var starterPath = folderBrowserDialog.SelectedPath.StartsWith(rootDir) ? folderBrowserDialog.SelectedPath : rootDir;
+                OpenDirectory(starterPath);
             }
         }
-        public void OpenDirectory(string path)
+        public void OpenDirectory(string starterPath)
         {
-            FilesListView.Items.Clear();
-
-            curDirPath = path;
-            string filesKey = "files:" + curDirPath;
-            string subdirsKey = "subdirs:" + curDirPath;
-
-            string[] files;
-            string[] subdirs;
-            if (RedisHelper.Exists(filesKey))
+            FilesListView.Dispatcher.BeginInvoke(new Action(() =>
             {
-                files = (string[])RedisHelper.Get(filesKey);
-                subdirs = (string[])RedisHelper.Get(subdirsKey);
-            }
-            else
-            {
-                files = Directory.GetFiles(curDirPath, "*.*");
-                RedisHelper.Set(filesKey, files);
-                subdirs = Directory.GetDirectories(curDirPath);
-                RedisHelper.Set(subdirsKey, subdirs);
-            }
+                FilesListView.Items.Clear();
+            }));
+            curDir = starterPath;
+
+            //string filesKey = "files:" + starterPath;
+            //string subdirsKey = "subdirs:" + starterPath;
+
+            //string[] files;
+            //string[] subdirs;
+            //if (RedisHelper.Exists(filesKey))
+            //{
+            //    files = (string[])RedisHelper.Get(filesKey);
+            //    subdirs = (string[])RedisHelper.Get(subdirsKey);
+            //}
+            //else
+            //{
+            //    files = Directory.GetFiles(curDirPath, "*.*");
+            //    RedisHelper.Set(filesKey, files);
+            //    subdirs = Directory.GetDirectories(curDirPath);
+            //    RedisHelper.Set(subdirsKey, subdirs);
+            //}
+
+            var files = Directory.GetFiles(starterPath, "*.*");
+            var subdirs = Directory.GetDirectories(starterPath);
 
             foreach (var file in files)
             {
                 var fileInfo = new FileInfo(file);
-                FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", file));
+                FilesListView.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    FilesListView.Items.Add(new FileItemInfo(fileInfo.Name, "file", file));
+                }));
             }
 
             foreach (var dir in subdirs)
             {
                 var directoryInfo = new DirectoryInfo(dir);
-                FilesListView.Items.Add(new FileItemInfo(directoryInfo.Name, "directory", dir));
+                FilesListView.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    FilesListView.Items.Add(new FileItemInfo(directoryInfo.Name, "directory", dir));
+                }));
             }
         }
         // 双击 ListViewItem 的事件处理函数，用于打开某个文件
         private void FileItem_DoubleClick(object sender, MouseButtonEventArgs e)
         {
-            var fileItemInfo = ((ListViewItem)sender).Content as FileItemInfo;
-            Process.Start(fileItemInfo.Path);
+            var info = ((ListViewItem)sender).Content as FileItemInfo;
+            var fp = GetRealPath(info.Path);
+            if (!File.Exists(fp) && !Directory.Exists(fp))
+            {
+                Console.WriteLine("{0} does not exist.", fp);
+                return;
+            }
+            var argument = "/select, \"" + fp + "\"";
+            Process.Start("explorer.exe", argument);
         }
         // 单击 FindButton 的事件处理函数， 用于进行文件搜索
         private void FindButton_Click(object sender, RoutedEventArgs e)
@@ -139,81 +183,86 @@ namespace Finding
             {
                 return;
             }
-            SearchInSelectedDir(curDirPath, key);
+            SearchInSelectedDir(key);
+        }
+        private string GetRealParentDirName(string path)
+        {
+            var idx = path.IndexOf(zipExtractSuffix);
+            if(idx != -1)
+            {
+                idx = path.LastIndexOf('\\', idx);
+            }
+            else
+            {
+                idx = path.LastIndexOf('\\');
+            }
+            return path.Substring(0, idx);
+        }
+        private string GetRealFileName(string path)
+        {
+            var slash = path.LastIndexOf('\\');
+            var idx = path.IndexOf(zipExtractSuffix);
+            if(idx != -1)
+            {
+                slash = path.LastIndexOf('\\', idx);
+                var zipName = path.Substring(slash + 1, idx - slash - 1);
+                return zipName + ".zip";
+            }
+            return path.Substring(slash + 1);
+        }
+        private string GetRealPath(string path)
+        {
+            return string.Format(@"{0}\{1}", GetRealParentDirName(path), GetRealFileName(path));
         }
         /// <summary>
         /// 根据key搜索当前目录下匹配的文件
         /// </summary>
         /// <param name="dir">当前文件夹</param>
         /// <param name="key">搜索关键字</param>
-        public void SearchInSelectedDir(string dir, string key)
+        public void SearchInSelectedDir(string key)
         {
-            var swTotal = Stopwatch.StartNew();
-
-            stopwatch.Start();
-            FilesListView.Items.Clear();
-
-            string combinedKey = GetCombinedKey(key);
-            if (RedisHelper.Exists(combinedKey))
+            if(curDir == null)
             {
-                MessageBox.Show("从缓存获取成功");
-                matchedFilenameList = RedisHelper.ListGet<string>(combinedKey);
-                foreach(var matchedPath in matchedFilenameList)
-                {
-                    // 判断文件更新
-                    string oriMD5 = RedisHelper.Get<string>(GetMD5Key(matchedPath));
-                    string curMD5 = MD5Checker.GetFileMD5(matchedPath);
-                    if(oriMD5 != curMD5)
-                    {
-                        // 摘要发生变化
-                        // todo 移除缓存
-                        RenewFile(matchedPath, key);
-                    }
-                }
-                DispMatchedFiles();
-            } 
-            else
-            {
-                //提前解压缩
-                var sw = Stopwatch.StartNew();
-                var ziper = new Ziper();
-                TR.ZipSearched.AddRange(ziper.extract(dir));
-                sw.Stop();
-                TR.Zip = sw.Elapsed.TotalMilliseconds * 1e6;
-
-                TR.Doc = 0;
-                TR.Img = 0;
-                var files = Directory.GetFiles(curDirPath, "*.*", SearchOption.AllDirectories);
-                foreach (var filename in files)
-                {
-                    if (IsImageFile(filename))
-                    {
-                        TR.ImgSearched.Add(filename);
-                        Console.WriteLine(filename);
-                        sw = Stopwatch.StartNew();
-                        ImageContainsKey(filename, key);
-                        sw.Stop();
-                        TR.Img += sw.Elapsed.TotalMilliseconds * 1e6;
-                    }
-                    else if (IsDocFile(filename))
-                    {
-                        TR.DocSearched.Add(filename);
-                        Console.WriteLine(filename);
-                        sw = Stopwatch.StartNew();
-                        DocumentContainsKey(filename, key, ziper.Table);
-                        sw.Stop();
-                        TR.Doc += sw.Elapsed.TotalMilliseconds * 1e6;
-                    }
-                }
-                //清除被解压的文件夹
-                ziper.ClearFile();
+                curDir = rootDir;
             }
 
-            stopwatch.Stop();
-            DispElapsedTime();
+            FilesListView.Dispatcher.BeginInvoke(new Action(() =>
+            {
+                FilesListView.Items.Clear();
+            }));
+            var swTotal = Stopwatch.StartNew();
+
+            var searchResults = escli.Search<Entry>(s =>
+                s.Query(qry =>
+                    qry.Bool(b =>
+                        b.Filter(f =>
+                            f.Prefix(p =>
+                                p.Field(e => e.Path).Value(string.Format(@"{0}\", curDir))
+                            )
+                        ).Must(m =>
+                            m.QueryString(qs =>
+                                qs.Fields(f => 
+                                    f.Field(e => e.Content)
+                                ).Query(key).DefaultOperator(Operator.And)
+                            )
+                        )
+                    )
+                ).Size(100).Sort(sort => 
+                    sort.Ascending(e => e.Path)
+                )
+            ).Documents;
+
+            foreach(var r in searchResults)
+            {
+                FilesListView.Dispatcher.BeginInvoke(new Action(() =>
+                {
+                    FilesListView.Items.Add(new FileItemInfo(GetRealFileName(r.Path), r.IsDir ? "Directory" : "File", r.Path));
+                }));
+            }
 
             swTotal.Stop();
             TR.Total = swTotal.Elapsed.TotalMilliseconds * 1e6;
+            MessageBox.Show(string.Format("Time Used: {0} s", swTotal.Elapsed.TotalSeconds));
         }
         private bool IsDocFile(string filename)
         {
@@ -358,7 +407,7 @@ namespace Finding
         /// <returns></returns>
         private string GetCombinedKey(string key)
         {
-            return curDirPath + ":" + key;
+            return curDir + ":" + key;
         }
         /// <summary>
         /// 获取路径的md5的组合键
@@ -383,9 +432,9 @@ namespace Finding
         /// <summary>
         /// 显示搜索耗时
         /// </summary>
-        private void DispElapsedTime()
-        {
-            Lbl_Used_Time.Content = string.Format("{0}s", stopwatch.Elapsed.TotalSeconds);
-        }
+        //private void DispElapsedTime()
+        //{
+        //    Lbl_Used_Time.Content = string.Format("{0}s", stopwatch.Elapsed.TotalSeconds);
+        //}
     }
 }

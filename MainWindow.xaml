@@ -76,8 +76,10 @@
             </Grid>
            
         </StackPanel>
+        <!-- 
         <Label Content="Used Time: "  Margin="10,455,0,0"/>
         <Label x:Name="Lbl_Used_Time" Content="0s"  Margin="90,455,0.4,36.8"/>
+        -->
     </Grid>
 
 </Controls:MetroWindow>
