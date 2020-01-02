@@ -8,6 +8,7 @@ using System.IO;
 using System.Windows;
 using System.Windows.Controls;
 using System.Windows.Input;
+using libgui;
 
 namespace Finding
 {
@@ -108,10 +109,19 @@ namespace Finding
         // 点击 OpenDirectoryMenuItem 的事件处理函数，用于打开一个文件夹
         private void OpenDirectoryMenuItem_Click(object sender, RoutedEventArgs e)
         {
-            Ookii.Dialogs.Wpf.VistaFolderBrowserDialog folderBrowserDialog = new Ookii.Dialogs.Wpf.VistaFolderBrowserDialog();
+            var folderBrowserDialog = new FindingOpenFileDlg();
             if (folderBrowserDialog.ShowDialog() == true)
             {
-                var starterPath = folderBrowserDialog.SelectedPath.StartsWith(rootDir) ? folderBrowserDialog.SelectedPath : rootDir;
+                var pathLower = folderBrowserDialog.CurDir.ToLower();
+                string starterPath;
+                if(pathLower.StartsWith(rootDir, StringComparison.Ordinal))
+                {
+                    starterPath = pathLower;
+                }
+                else
+                {
+                    starterPath = rootDir;
+                }
                 OpenDirectory(starterPath);
             }
         }
